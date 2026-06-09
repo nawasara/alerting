@@ -26,15 +26,16 @@ class PermissionSeeder extends Seeder
             $developer->givePermissionTo($permissions);
         }
 
-        if ($sysadmin = Role::where('name', 'sysadmin')->first()) {
-            // Sysadmin handles incidents, not rule definitions — rule.manage
-            // is a code-level concern owned by developers.
-            $sysadmin->givePermissionTo([
-                'alerting.view',
-                'alerting.acknowledge',
-                'alerting.resolve',
-                'alerting.silence',
-            ]);
-        }
+        // sysadmin is a project-wide role we assume exists; create it here
+        // if missing so a fresh install bootstraps cleanly. Sysadmin handles
+        // incidents but doesn't define rules — rule.manage is a code-level
+        // concern owned by developers.
+        $sysadmin = Role::firstOrCreate(['name' => 'sysadmin', 'guard_name' => 'web']);
+        $sysadmin->givePermissionTo([
+            'alerting.view',
+            'alerting.acknowledge',
+            'alerting.resolve',
+            'alerting.silence',
+        ]);
     }
 }
