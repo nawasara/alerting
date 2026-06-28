@@ -7,6 +7,7 @@ return [
         'workspace' => 'monitoring',
         'label' => 'Monitoring',
         'icon' => 'lucide-activity',
+        'group' => 'Observability',
         'url' => '',
         'permission' => 'alerting.view',
         'submenu' => [
