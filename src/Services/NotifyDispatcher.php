@@ -31,13 +31,23 @@ class NotifyDispatcher
             throw new \InvalidArgumentException("Invalid dispatch kind: {$kind}");
         }
 
+        // Audience = role-based groups + directly configured addresses. The
+        // extras cover shared mailboxes / people without an account, and keep
+        // alerts flowing when a role happens to have no members.
         $recipients = $this->recipients->resolveBySeverity($state->severity);
-        if ($recipients->isEmpty()) {
+        $emails = collect($recipients->pluck('email')->filter()->all())
+            ->merge($this->recipients->extraEmailsBySeverity($state->severity))
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($emails)) {
             // No-one is configured to hear about this severity — log so
             // sysadmin sees it in the activity feed, but don't error.
             Log::warning('alerting: no recipients for severity '.$state->severity, [
                 'rule' => $rule->key(),
                 'kind' => $kind,
+                'hint' => 'assign the role, or set ALERTING_RECIPIENTS in .env',
             ]);
 
             return;
@@ -47,7 +57,6 @@ class NotifyDispatcher
 
         $subject = $this->renderSubject($state, $rule, $kind);
         $body = $this->renderBody($state, $rule, $kind);
-        $emails = $recipients->pluck('email')->filter()->all();
 
         try {
             Notify::to(...$emails)

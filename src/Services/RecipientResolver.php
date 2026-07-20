@@ -51,4 +51,30 @@ class RecipientResolver
     {
         return array_keys(config('nawasara-alerting.recipient_groups', []));
     }
+
+    /**
+     * Extra e-mail addresses for a severity, configured directly rather than via
+     * a role. Role-based groups only reach people who have a Nawasara account;
+     * these cover shared mailboxes and outside stakeholders (CSIRT, kepala
+     * dinas, vendor) — and act as a safety net when a role has no members.
+     *
+     * Sources, merged and deduped:
+     *   - nawasara-alerting.extra_recipients.all        (every severity)
+     *   - nawasara-alerting.extra_recipients.{severity} (that severity only)
+     *
+     * @return list<string>
+     */
+    public function extraEmailsBySeverity(string $severity): array
+    {
+        $all = (array) config('nawasara-alerting.extra_recipients.all', []);
+        $forSeverity = (array) config("nawasara-alerting.extra_recipients.{$severity}", []);
+
+        return collect($all)
+            ->merge($forSeverity)
+            ->map(fn ($e) => trim((string) $e))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values()
+            ->all();
+    }
 }

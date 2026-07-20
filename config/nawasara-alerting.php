@@ -47,6 +47,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Extra recipients (e-mail, no account needed)
+    |--------------------------------------------------------------------------
+    | Addresses added on top of the role-based groups above. Use these for
+    | shared mailboxes and people without a Nawasara account (CSIRT, kepala
+    | dinas, vendor) — and as a safety net when a role has no members yet, so
+    | alerts still reach someone.
+    |
+    | Comma-separated env, e.g.
+    |   ALERTING_RECIPIENTS=csirt@ponorogo.go.id,kominfo@ponorogo.go.id
+    |   ALERTING_RECIPIENTS_CRITICAL=kadis@ponorogo.go.id
+    */
+    'extra_recipients' => [
+        // every severity
+        'all' => array_filter(array_map('trim', explode(',', (string) env('ALERTING_RECIPIENTS', '')))),
+        // per-severity additions
+        'critical' => array_filter(array_map('trim', explode(',', (string) env('ALERTING_RECIPIENTS_CRITICAL', '')))),
+        'warning' => array_filter(array_map('trim', explode(',', (string) env('ALERTING_RECIPIENTS_WARNING', '')))),
+        'info' => array_filter(array_map('trim', explode(',', (string) env('ALERTING_RECIPIENTS_INFO', '')))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Escalation
     |--------------------------------------------------------------------------
     | Recurring scan of firing alerts that have exceeded their cooldown
