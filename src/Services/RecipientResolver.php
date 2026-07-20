@@ -66,7 +66,24 @@ class RecipientResolver
      */
     public function extraEmailsBySeverity(string $severity): array
     {
-        $all = (array) config('nawasara-alerting.extra_recipients.all', []);
+        // UI-managed list (nawasara_settings) wins over the env/config default,
+        // so operators can change the audience without a deploy.
+        $fromSetting = null;
+        if (class_exists(\Nawasara\Core\Models\Setting::class)) {
+            try {
+                $fromSetting = \Nawasara\Core\Models\Setting::get('alerting.extra_recipients', null);
+            } catch (\Throwable $e) {
+                $fromSetting = null; // DB not ready (e.g. during install) — fall back.
+            }
+        }
+        if (is_string($fromSetting)) {
+            $fromSetting = preg_split('/[\s,;]+/', $fromSetting) ?: [];
+        }
+
+        $all = $fromSetting !== null && $fromSetting !== []
+            ? (array) $fromSetting
+            : (array) config('nawasara-alerting.extra_recipients.all', []);
+
         $forSeverity = (array) config("nawasara-alerting.extra_recipients.{$severity}", []);
 
         return collect($all)
