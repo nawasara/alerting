@@ -19,14 +19,24 @@ return [
             'cooldown_minutes' => 30,
             'default_color' => 'danger',
         ],
+        // 'developers' disertakan di ketiga severity, bukan hanya critical.
+        // Alasannya praktis: di deployment Ponorogo role 'sysadmin' tidak punya
+        // anggota, sehingga setiap alert warning/info berakhir sebagai baris
+        // "no recipients for severity" di log dan tidak sampai ke siapa pun.
+        // Auto-block IP (secscan.ip.autoblocked) ber-severity warning, jadi
+        // seluruh tindakan blokir berlangsung tanpa pemberitahuan.
+        //
+        // Menambahkan grup di sini lebih aman daripada mengisi extra_recipients
+        // dengan email tetap: audiens tetap mengikuti keanggotaan role, jadi
+        // orang yang keluar dari tim otomatis berhenti menerima alert.
         'warning' => [
-            'recipient_groups' => ['sysadmin'],
+            'recipient_groups' => ['developers', 'sysadmin'],
             'channels' => ['email'],
             'cooldown_minutes' => 120,
             'default_color' => 'warning',
         ],
         'info' => [
-            'recipient_groups' => ['sysadmin'],
+            'recipient_groups' => ['developers', 'sysadmin'],
             'channels' => ['email'],
             'cooldown_minutes' => 360,
             'default_color' => 'info',
