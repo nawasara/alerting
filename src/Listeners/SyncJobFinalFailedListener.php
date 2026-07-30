@@ -43,7 +43,9 @@ class SyncJobFinalFailedListener
             ]));
         }
 
-        $error = $event->exception->getMessage();
+        // errorMessage, bukan exception->getMessage(): $exception tidak dibawa
+        // lintas queue (objek Throwable bisa memuat closure di stack trace-nya).
+        $error = $event->errorMessage;
         $context = [
             'service' => $service,
             'action' => $tracker->action,
