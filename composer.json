@@ -33,7 +33,7 @@
         "spatie/laravel-permission": "^6.0",
         "nawasara/ui": "*",
         "nawasara/sync": "^0.2",
-        "nawasara/notification": "*",
+        "nawasara/notification": "^0.2",
         "nawasara/auth-primitives": "*",
         "livewire/livewire": "^3.0"
     },
