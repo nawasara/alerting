@@ -9,9 +9,11 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Nawasara\Alerting\Jobs\EscalateStaleAlertsJob;
 use Nawasara\Alerting\Listeners\SyncJobFinalFailedListener;
+use Nawasara\Alerting\Listeners\SyncJobSucceededListener;
 use Nawasara\Alerting\Services\AlerterImpl;
 use Nawasara\Alerting\Services\AlertRuleRegistry;
 use Nawasara\Sync\Events\SyncJobFinalFailed;
+use Nawasara\Sync\Events\SyncJobSucceeded;
 use Symfony\Component\Finder\Finder;
 
 class AlertingServiceProvider extends ServiceProvider
@@ -80,6 +82,11 @@ class AlertingServiceProvider extends ServiceProvider
         }
 
         Event::listen(SyncJobFinalFailed::class, SyncJobFinalFailedListener::class);
+
+        // Pasangannya: memulihkan alert saat sync berhasil kembali. Tanpa ini
+        // alert kegagalan sync menyala selamanya, karena tidak ada satu pun
+        // jalur lain yang menutupnya.
+        Event::listen(SyncJobSucceeded::class, SyncJobSucceededListener::class);
     }
 
     /**
