@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Nawasara\Alerting\Contracts\AlertRuleDefinition;
 use Nawasara\Alerting\Models\AlertState;
 use Nawasara\Notification\Facades\Notify;
+use Nawasara\Vault\Facades\Vault;
 
 /**
  * Bridges the alerting state machine to nawasara/notification's channel
@@ -41,9 +42,16 @@ class NotifyDispatcher
             ->values()
             ->all();
 
-        if (empty($emails)) {
-            // No-one is configured to hear about this severity — log so
-            // sysadmin sees it in the activity feed, but don't error.
+        $channels = config("nawasara-alerting.severity.{$state->severity}.channels", ['email']);
+
+        // ⚠️ Tidak boleh berhenti hanya karena daftar surelnya kosong.
+        //
+        // Dulu di sini ada `return` bila tidak ada penerima surel. Setelah
+        // Telegram ada, itu berarti kanal yang sehat ikut dibungkam oleh
+        // ketiadaan penerima kanal LAIN — dan justru pada deployment yang
+        // memang memilih Telegram saja, peringatannya tidak akan pernah
+        // sampai, tanpa satu pun galat.
+        if (empty($emails) && $channels === ['email']) {
             Log::warning('alerting: no recipients for severity '.$state->severity, [
                 'rule' => $rule->key(),
                 'kind' => $kind,
@@ -53,26 +61,62 @@ class NotifyDispatcher
             return;
         }
 
-        $channels = config("nawasara-alerting.severity.{$state->severity}.channels", ['email']);
-
         $subject = $this->renderSubject($state, $rule, $kind);
         $body = $this->renderBody($state, $rule, $kind);
 
+        $context = [
+            'alert_state_id' => $state->id,
+            'rule_key' => $rule->key(),
+            'kind' => $kind,
+            'target_type' => $state->target_type,
+            'target_id' => $state->target_id,
+            'fire_count' => $state->fire_count,
+            'telegram_topic' => $this->topicFor($state, $rule),
+        ];
+
         try {
-            Notify::to(...$emails)
-                ->channel($channels)
-                ->subject($subject)
-                ->body($body)
-                ->priority($state->severity)
-                ->context([
-                    'alert_state_id' => $state->id,
-                    'rule_key' => $rule->key(),
-                    'kind' => $kind,
-                    'target_type' => $state->target_type,
-                    'target_id' => $state->target_id,
-                    'fire_count' => $state->fire_count,
-                ])
-                ->send();
+            // Surel dikirim ke ORANG; Telegram ke SATU GRUP.
+            //
+            // Keduanya dipisah karena penerimanya memang berbeda jenis, bukan
+            // format berbeda dari hal yang sama. Menyatukannya berarti chat id
+            // grup ikut dikirimi surel, atau alamat surel ikut dikirim ke
+            // Telegram — dan yang kedua gagal tanpa suara.
+            $kanalSurel = array_values(array_intersect($channels, ['email']));
+            $kanalLain = array_values(array_diff($channels, ['email']));
+
+            if ($kanalSurel !== [] && $emails !== []) {
+                Notify::to(...$emails)
+                    ->channel($kanalSurel)
+                    ->subject($subject)
+                    ->body($body)
+                    ->priority($state->severity)
+                    ->context($context)
+                    ->send();
+            }
+
+            foreach ($kanalLain as $kanal) {
+                $tujuan = $this->groupRecipientFor($kanal);
+
+                if ($tujuan === null) {
+                    // Kanalnya dinyalakan tetapi tujuannya belum diisi. Dicatat,
+                    // bukan didiamkan: kanal yang menyala tanpa tujuan terlihat
+                    // persis seperti kanal yang bekerja.
+                    Log::warning("alerting: kanal '{$kanal}' aktif tetapi tujuannya belum dikonfigurasi", [
+                        'rule' => $rule->key(),
+                        'severity' => $state->severity,
+                    ]);
+
+                    continue;
+                }
+
+                Notify::to($tujuan)
+                    ->channel([$kanal])
+                    ->subject($subject)
+                    ->body($body)
+                    ->priority($state->severity)
+                    ->context($context)
+                    ->send();
+            }
         } catch (\Throwable $e) {
             // Swallow — never let a notification failure cascade back into
             // the caller (the AlertEvaluator). Log and move on.
@@ -82,6 +126,51 @@ class NotifyDispatcher
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Topik Telegram untuk peringatan ini.
+     *
+     * Yang benar-benar berharga hanyalah memisahkan `critical` dari sisanya:
+     * di kotak masuk, 4 peringatan kritis tampak sama persis dengan 405
+     * warning di sekelilingnya. Pemisahan berdasarkan asal (keamanan vs
+     * sinkronisasi) sekadar merapikan, jadi ia diperiksa SESUDAHNYA.
+     *
+     * Pemetaan topik → id thread ada di Vault, bukan di sini, supaya menambah
+     * topik tidak menuntut rilis paket.
+     */
+    protected function topicFor(AlertState $state, AlertRuleDefinition $rule): string
+    {
+        if ($state->severity === 'critical') {
+            return 'kritis';
+        }
+
+        return match (true) {
+            str_starts_with($rule->key(), 'secscan.') => 'keamanan',
+            str_starts_with($rule->key(), 'sync.') => 'sinkronisasi',
+            default => 'pengumuman',
+        };
+    }
+
+    /**
+     * Tujuan untuk kanal yang mengirim ke satu tempat bersama, bukan per orang.
+     *
+     * Dibaca dari Vault bila tersedia, dengan config sebagai cadangan supaya
+     * kanal tetap dapat diuji tanpa Vault terpasang.
+     */
+    protected function groupRecipientFor(string $channel): ?string
+    {
+        $tujuan = config("nawasara-alerting.group_recipients.{$channel}");
+
+        if (! $tujuan && class_exists(Vault::class)) {
+            try {
+                $tujuan = Vault::get($channel, 'chat_id');
+            } catch (\Throwable) {
+                $tujuan = null;
+            }
+        }
+
+        return ($tujuan !== null && $tujuan !== '') ? (string) $tujuan : null;
     }
 
     protected function renderSubject(AlertState $state, AlertRuleDefinition $rule, string $kind): string
