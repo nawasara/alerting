@@ -15,16 +15,9 @@ return [
     'severity' => [
         'critical' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            // Telegram dinyalakan untuk `critical` LEBIH DULU, sendirian.
-            //
-            // Ini severity dengan jumlah paling sedikit, jadi bila ada yang
-            // keliru — topik tertukar, pesan terlalu panjang, bot dikeluarkan
-            // dari grup — yang terlanjur terkirim juga sedikit. Menyalakan
-            // semuanya sekaligus membuat kekeliruan kecil menjadi ratusan
-            // pesan sebelum sempat disadari.
-            //
-            // `warning` menyusul setelah ini terbukti tenang. Surel TETAP
-            // jalan: Telegram menambah kecepatan sampai, bukan mengganti jejak.
+            // Surel TETAP jalan berdampingan dengan Telegram — bukan diganti.
+            // Telegram menambah kecepatan sampai; surel yang menyimpan jejak.
+            // Bila bot dicabut atau grupnya terhapus, peringatan tetap tiba.
             'channels' => ['email', 'telegram'],
             'cooldown_minutes' => 30,
             'default_color' => 'danger',
@@ -41,13 +34,19 @@ return [
         // orang yang keluar dari tim otomatis berhenti menerima alert.
         'warning' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            'channels' => ['email'],
+            // Severity ini yang paling ramai — auto-block IP dan kegagalan
+            // sinkronisasi ada di sini. Aman dinyalakan HANYA setelah dua
+            // perbaikan 2 September 2026: cooldown auto-block yang tadinya 0
+            // (405 blokir → 2.014 pesan) dan kunci alert sync yang berubah
+            // tiap percobaan. Tanpa keduanya, grup ini akan ditinggalkan
+            // dalam sehari.
+            'channels' => ['email', 'telegram'],
             'cooldown_minutes' => 120,
             'default_color' => 'warning',
         ],
         'info' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            'channels' => ['email'],
+            'channels' => ['email', 'telegram'],
             'cooldown_minutes' => 360,
             'default_color' => 'info',
         ],
