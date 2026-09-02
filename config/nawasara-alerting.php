@@ -15,7 +15,17 @@ return [
     'severity' => [
         'critical' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            'channels' => ['email'],
+            // Telegram dinyalakan untuk `critical` LEBIH DULU, sendirian.
+            //
+            // Ini severity dengan jumlah paling sedikit, jadi bila ada yang
+            // keliru — topik tertukar, pesan terlalu panjang, bot dikeluarkan
+            // dari grup — yang terlanjur terkirim juga sedikit. Menyalakan
+            // semuanya sekaligus membuat kekeliruan kecil menjadi ratusan
+            // pesan sebelum sempat disadari.
+            //
+            // `warning` menyusul setelah ini terbukti tenang. Surel TETAP
+            // jalan: Telegram menambah kecepatan sampai, bukan mengganti jejak.
+            'channels' => ['email', 'telegram'],
             'cooldown_minutes' => 30,
             'default_color' => 'danger',
         ],
