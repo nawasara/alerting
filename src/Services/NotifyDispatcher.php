@@ -72,6 +72,17 @@ class NotifyDispatcher
             'target_id' => $state->target_id,
             'fire_count' => $state->fire_count,
             'telegram_topic' => $this->topicFor($state, $rule),
+            'severity' => $state->severity,
+            'description' => $rule->description(),
+
+            // Konteks alert itu sendiri (label, ambang, nilai terukur) ikut
+            // dibawa supaya kanal yang bukan surel dapat menyusun pesannya
+            // sendiri dari data, bukan dari badan HTML surel.
+            //
+            // Tanpa ini, Telegram hanya punya badan surel dan terpaksa
+            // membuang tag-nya — yang tersisa adalah kerangka tabel berupa
+            // baris kosong berlapis, nyaris tak terbaca di ponsel.
+            'alert' => $state->context ?? [],
         ];
 
         try {
