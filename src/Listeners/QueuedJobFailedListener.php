@@ -3,6 +3,7 @@
 namespace Nawasara\Alerting\Listeners;
 
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Str;
 use Nawasara\Alerting\Facades\Alerter;
 use Nawasara\Alerting\Models\AlertRule;
@@ -78,6 +79,19 @@ class QueuedJobFailedListener
         }
 
         $pesan = $event->exception?->getMessage() ?? '';
+        $kelas = $event->exception ? $event->exception::class : null;
+
+        // MaxAttemptsExceededException hampir tidak pernah berarti "job-nya
+        // rusak" — ia berarti job DIBUNUH TIMEOUT, dan pesannya ("has been
+        // attempted too many times") tidak menyebutkan itu sama sekali.
+        //
+        // Laravel memakai nilai TERKECIL antara --timeout pekerja dan $timeout
+        // job. Tanpa petunjuk ini, pembacanya akan mencari bug di dalam job
+        // padahal yang perlu dinaikkan adalah batas waktunya.
+        $petunjuk = $kelas === MaxAttemptsExceededException::class
+            ? ' — kemungkinan dibunuh timeout, bukan galat di dalam job; '
+                .'periksa $timeout job dan --timeout pekerja antrean'
+            : '';
 
         Alerter::fire($ruleKey, 'QueuedJob', $jobName, [
             'label' => $jobName,
@@ -89,8 +103,8 @@ class QueuedJobFailedListener
             'job' => $jobName,
             'antrean' => $event->job->getQueue(),
             'percobaan' => $event->job->attempts(),
-            'error_short' => Str::limit($pesan, 120, '…'),
-            'exception' => $event->exception ? $event->exception::class : null,
+            'error_short' => Str::limit($pesan, 120, '…').$petunjuk,
+            'exception' => $kelas,
         ]);
     }
 }

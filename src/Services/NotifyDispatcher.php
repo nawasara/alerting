@@ -152,13 +152,49 @@ class NotifyDispatcher
      */
     protected function topicFor(AlertState $state, AlertRuleDefinition $rule): string
     {
+        $key = $rule->key();
+
+        // ⚠️ Ketersediaan diperiksa SEBELUM severity, dan itu disengaja.
+        //
+        // Situs mati memang genting, tetapi jumlahnya berbeda kelas: 29 dari
+        // 73 monitor sedang mati sekarang, dan banyak di antaranya sudah mati
+        // berminggu-minggu (uptime 30 hari = 0%). Membiarkannya masuk topik
+        // Kritis membuat topik itu berisi puluhan pesan tentang hal yang sama
+        // tiap hari — dan peringatan yang BENAR-BENAR jarang, seperti agen
+        // keamanan mati atau disk hampir habis, ikut tenggelam.
+        //
+        // Topik terpisah membuat keduanya tetap terbaca: yang satu daftar
+        // pantauan, yang satu lagi panggilan bangun.
+        if (str_starts_with($key, 'uptime.')) {
+            return str_contains(strtolower((string) ($state->context['tag'] ?? '')), 'wifi')
+                ? 'wifi'
+                : 'ketersediaan';
+        }
+
+        // Job antrean yang gagal juga diperiksa SEBELUM severity.
+        //
+        // Ia ber-severity `critical` dengan sengaja — job yang mati diam-diam
+        // mematikan hal lain yang bergantung padanya, dan tidak ada gejala
+        // lain yang menandainya. Tetapi TEMPATNYA bukan di Kritis: ini urusan
+        // proses latar belakang, sekelompok dengan kegagalan sinkronisasi, dan
+        // ditangani orang yang sama.
+        //
+        // `ScanWordpressJob` yang gagal berulang adalah pekerjaan pemeliharaan,
+        // bukan panggilan bangun tengah malam. Membiarkannya di Kritis membuat
+        // topik itu berisi hal rutin, dan yang benar-benar jarang — agen
+        // keamanan mati, disk hampir habis — ikut tenggelam.
+        if (str_starts_with($key, 'queue.')) {
+            return 'sinkronisasi';
+        }
+
         if ($state->severity === 'critical') {
             return 'kritis';
         }
 
         return match (true) {
-            str_starts_with($rule->key(), 'secscan.') => 'keamanan',
-            str_starts_with($rule->key(), 'sync.') => 'sinkronisasi',
+            str_starts_with($key, 'secscan.') => 'keamanan',
+            str_starts_with($key, 'sync.') => 'sinkronisasi',
+            str_starts_with($key, 'cloudflare.ssl') => 'sertifikat',
             default => 'pengumuman',
         };
     }

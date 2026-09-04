@@ -82,4 +82,53 @@ class QueuedJobFailureTest extends TestCase
             $pendek('Nawasara\Proxmox\Jobs\CheckCapacityJob'),
         );
     }
+
+    /**
+     * Job gagal masuk topik Sinkronisasi, BUKAN Kritis.
+     *
+     * Severity-nya `critical` dengan sengaja — job yang mati diam-diam
+     * mematikan hal lain yang bergantung padanya. Tetapi tempatnya bukan di
+     * Kritis: `ScanWordpressJob` yang gagal berulang adalah pekerjaan
+     * pemeliharaan, bukan panggilan bangun tengah malam.
+     *
+     * Ketahuan dari produksi: alert pertama yang masuk justru mendarat di
+     * Kritis, karena severity diperiksa lebih dulu daripada asalnya.
+     */
+    public function test_job_gagal_masuk_topik_sinkronisasi_bukan_kritis(): void
+    {
+        $topik = function (string $key, string $severity): string {
+            if (str_starts_with($key, 'uptime.')) {
+                return 'ketersediaan';
+            }
+
+            if (str_starts_with($key, 'queue.')) {
+                return 'sinkronisasi';
+            }
+
+            return $severity === 'critical' ? 'kritis' : 'pengumuman';
+        };
+
+        $this->assertSame('sinkronisasi', $topik('queue.job.failed', 'critical'));
+        $this->assertNotSame('kritis', $topik('queue.job.failed', 'critical'));
+
+        // Yang memang layak membangunkan orang tetap di Kritis.
+        $this->assertSame('kritis', $topik('secscan.agent.offline', 'critical'));
+    }
+
+    /**
+     * MaxAttemptsExceededException berarti DIBUNUH TIMEOUT, bukan job rusak.
+     *
+     * Pesannya ("has been attempted too many times") tidak menyebutkan itu
+     * sama sekali, sehingga pembacanya mencari bug di dalam job padahal yang
+     * perlu dinaikkan adalah batas waktunya.
+     */
+    public function test_kegagalan_timeout_diberi_petunjuk(): void
+    {
+        $petunjuk = fn (string $kelas) => $kelas === 'Illuminate\Queue\MaxAttemptsExceededException'
+            ? 'timeout'
+            : '';
+
+        $this->assertSame('timeout', $petunjuk('Illuminate\Queue\MaxAttemptsExceededException'));
+        $this->assertSame('', $petunjuk('RuntimeException'));
+    }
 }
