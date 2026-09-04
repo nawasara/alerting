@@ -3,11 +3,13 @@
 namespace Nawasara\Alerting;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Nawasara\Alerting\Jobs\EscalateStaleAlertsJob;
+use Nawasara\Alerting\Listeners\QueuedJobFailedListener;
 use Nawasara\Alerting\Listeners\SyncJobFinalFailedListener;
 use Nawasara\Alerting\Listeners\SyncJobSucceededListener;
 use Nawasara\Alerting\Services\AlerterImpl;
@@ -87,6 +89,12 @@ class AlertingServiceProvider extends ServiceProvider
         // alert kegagalan sync menyala selamanya, karena tidak ada satu pun
         // jalur lain yang menutupnya.
         Event::listen(SyncJobSucceeded::class, SyncJobSucceededListener::class);
+
+        // Jaring terakhir untuk job antrean YANG BUKAN sync. Tanpa ini,
+        // CheckSlaJob atau CheckCapacityJob dapat mati berbulan-bulan tanpa
+        // ada yang tahu — dan yang kedua justru dibuat untuk mencegah basis
+        // data mati karena disk penuh.
+        Event::listen(JobFailed::class, QueuedJobFailedListener::class);
     }
 
     /**

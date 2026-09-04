@@ -57,6 +57,7 @@ class EscalateStaleAlertsJob implements ShouldQueue
         foreach ($firing as $state) {
             if ($state->isAcknowledged() || $state->isSilenced()) {
                 $skipped++;
+
                 continue;
             }
 
@@ -64,6 +65,7 @@ class EscalateStaleAlertsJob implements ShouldQueue
             // re-notifying. Sysadmin still sees the firing badge in UI.
             if ($state->fire_count >= $maxRenotify) {
                 $skipped++;
+
                 continue;
             }
 
@@ -73,12 +75,14 @@ class EscalateStaleAlertsJob implements ShouldQueue
                 // we can't compute its cooldown or render notifications.
                 // Skip and log; sysadmin can manually forceResolve from UI.
                 $unknown++;
+
                 continue;
             }
 
             $cooldown = $evaluator->effectiveCooldown($rule);
             if (! $state->shouldRenotify($cooldown)) {
                 $skipped++;
+
                 continue;
             }
 

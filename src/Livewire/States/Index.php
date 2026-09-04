@@ -29,6 +29,7 @@ class Index extends Component
 
     /** Silence form input (minutes). */
     public int $silenceMinutes = 60;
+
     public ?string $silenceReason = null;
 
     public function updatingSearch(): void

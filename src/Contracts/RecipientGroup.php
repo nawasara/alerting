@@ -2,6 +2,7 @@
 
 namespace Nawasara\Alerting\Contracts;
 
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Collection;
 
 /**
@@ -16,7 +17,7 @@ interface RecipientGroup
     public function label(): string;
 
     /**
-     * @return Collection<int, \Illuminate\Foundation\Auth\User>
+     * @return Collection<int, User>
      */
     public function resolve(): Collection;
 }

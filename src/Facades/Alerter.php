@@ -3,6 +3,7 @@
 namespace Nawasara\Alerting\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use Nawasara\Alerting\Services\AlerterImpl;
 
 /**
  * @method static \Nawasara\Alerting\Models\AlertState fire(string $ruleKey, ?string $targetType = null, ?string $targetId = null, array $context = [])
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \Illuminate\Support\Collection firing()
  * @method static void registerRule(object $rule)
  *
- * @see \Nawasara\Alerting\Services\AlerterImpl
+ * @see AlerterImpl
  */
 class Alerter extends Facade
 {

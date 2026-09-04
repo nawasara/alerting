@@ -5,6 +5,7 @@ namespace Nawasara\Alerting\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Foundation\Auth\User;
 
 /**
  * One row per (rule_key, target_type, target_id) — the central state for
@@ -39,12 +40,12 @@ class AlertState extends Model
 
     public function acknowledgedBy(): BelongsTo
     {
-        return $this->belongsTo(\Illuminate\Foundation\Auth\User::class, 'acknowledged_by');
+        return $this->belongsTo(User::class, 'acknowledged_by');
     }
 
     public function silencedBy(): BelongsTo
     {
-        return $this->belongsTo(\Illuminate\Foundation\Auth\User::class, 'silenced_by');
+        return $this->belongsTo(User::class, 'silenced_by');
     }
 
     // ─── Scopes ─────────────────────────────────────────

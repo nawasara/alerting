@@ -1,5 +1,8 @@
 <?php
 
+use Nawasara\Alerting\RecipientGroups\DevelopersGroup;
+use Nawasara\Alerting\RecipientGroups\SysadminGroup;
+
 return [
     'scheduler' => [
         'enabled' => env('NAWASARA_ALERTING_SCHEDULER_ENABLED', true),
@@ -12,6 +15,26 @@ return [
     | Per-severity default audience, channel, and re-notify cooldown.
     | A rule can override cooldown_minutes via AlertRuleDefinition::cooldownMinutes().
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Job antrean gagal — jaring terakhir
+    |--------------------------------------------------------------------------
+    |
+    | Menjaring job yang BUKAN turunan AbstractSyncJob, yang selama ini lolos
+    | sepenuhnya. Per 4 September 2026 `failed_jobs` berisi 1.320 baris tanpa
+    | satu pun peringatan sepanjang riwayatnya.
+    |
+    | Severity `critical` disengaja: job yang mati diam-diam mematikan hal lain
+    | yang bergantung padanya — SLA berhenti dihitung, peringatan disk penuh
+    | hilang — dan tidak ada gejala lain yang menandainya.
+    |
+    */
+    'queue_failure' => [
+        'enabled' => env('ALERTING_QUEUE_FAILURE_ENABLED', true),
+        'severity' => env('ALERTING_QUEUE_FAILURE_SEVERITY', 'critical'),
+        'cooldown_minutes' => (int) env('ALERTING_QUEUE_FAILURE_COOLDOWN', 1440),
+    ],
+
     'severity' => [
         'critical' => [
             'recipient_groups' => ['developers', 'sysadmin'],
@@ -60,8 +83,8 @@ return [
     | dispatch time so the most current role-based audience is always used.
     */
     'recipient_groups' => [
-        'developers' => \Nawasara\Alerting\RecipientGroups\DevelopersGroup::class,
-        'sysadmin' => \Nawasara\Alerting\RecipientGroups\SysadminGroup::class,
+        'developers' => DevelopersGroup::class,
+        'sysadmin' => SysadminGroup::class,
     ],
 
     /*

@@ -2,8 +2,10 @@
 
 namespace Nawasara\Alerting\Services;
 
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Collection;
 use Nawasara\Alerting\Contracts\RecipientGroup;
+use Nawasara\Core\Models\Setting;
 
 /**
  * Resolves "who should this severity be sent to" — severity → group keys
@@ -12,7 +14,7 @@ use Nawasara\Alerting\Contracts\RecipientGroup;
 class RecipientResolver
 {
     /**
-     * @return Collection<int, \Illuminate\Foundation\Auth\User>
+     * @return Collection<int, User>
      */
     public function resolveBySeverity(string $severity): Collection
     {
@@ -27,7 +29,7 @@ class RecipientResolver
     }
 
     /**
-     * @return Collection<int, \Illuminate\Foundation\Auth\User>
+     * @return Collection<int, User>
      */
     public function resolveByGroupKey(string $key): Collection
     {
@@ -69,9 +71,9 @@ class RecipientResolver
         // UI-managed list (nawasara_settings) wins over the env/config default,
         // so operators can change the audience without a deploy.
         $fromSetting = null;
-        if (class_exists(\Nawasara\Core\Models\Setting::class)) {
+        if (class_exists(Setting::class)) {
             try {
-                $fromSetting = \Nawasara\Core\Models\Setting::get('alerting.extra_recipients', null);
+                $fromSetting = Setting::get('alerting.extra_recipients', null);
             } catch (\Throwable $e) {
                 $fromSetting = null; // DB not ready (e.g. during install) — fall back.
             }
