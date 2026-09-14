@@ -1,8 +1,6 @@
 # nawasara/alerting
 
-Central incident bus for Nawasara — register alert rules, dispatch
-fire/resolve via the `Alerter` facade, state-machine with cooldown +
-escalation, routes notifications to `nawasara/notification` channels.
+Central incident bus for Nawasara. Register alert rules, dispatch fire/resolve through the `Alerter` facade, run a state machine with cooldown and escalation, and route notifications to `nawasara/notification` channels.
 
 ## Install
 
@@ -27,13 +25,13 @@ public function boot(): void
         'severity' => 'critical',
         'category' => 'infrastructure',
         'cooldown_minutes' => 60,
-        'description' => 'Node disk usage ≥ 95%',
+        'description' => 'Node disk usage >= 95%',
         'subject_template' => '[CRITICAL] Disk hampir penuh di {context.node}: {context.disk_pct}%',
     ]));
 }
 ```
 
-### 2. Fire the alert from a sync job / listener
+### 2. Fire the alert from a sync job or listener
 
 ```php
 Alerter::fire(
@@ -48,9 +46,7 @@ Alerter::fire(
 );
 ```
 
-`fire()` is idempotent — calling it again while the alert is already
-firing does not send a duplicate notification (cooldown gate). Calling
-again after the cooldown window triggers a re-notify (escalation hint).
+`fire()` is idempotent. Calling it again while the alert is already firing does not send a duplicate notification, because the cooldown gate blocks it. Calling again after the cooldown window triggers a re-notify (an escalation hint).
 
 ### 3. Resolve when the underlying condition clears
 
@@ -64,17 +60,15 @@ Alerter::resolve(
 
 ## Permissions
 
-- `alerting.view` — view dashboard + states
-- `alerting.acknowledge` — acknowledge a firing alert (stop re-notify)
-- `alerting.resolve` — manually force a state to ok
-- `alerting.silence` — silence a state for N minutes
-- `alerting.rule.manage` — code-level rule management (developers)
+- `alerting.view`: view the dashboard and states
+- `alerting.acknowledge`: acknowledge a firing alert (stop re-notify)
+- `alerting.resolve`: manually force a state to ok
+- `alerting.silence`: silence a state for N minutes
+- `alerting.rule.manage`: code-level rule management (developers)
 
 ## Sync failure auto-alerting
 
-Any package extending `nawasara/sync` `AbstractSyncJob` automatically
-gets sync-failure alerts when retries are exhausted — no manual rule
-registration needed. Rule key is `sync.job.failed.{service}`.
+Any package extending the `nawasara/sync` `AbstractSyncJob` gets sync-failure alerts automatically when retries are exhausted. No manual rule registration is needed. The rule key is `sync.job.failed.{service}`.
 
 ## State machine
 
@@ -88,10 +82,8 @@ registration needed. Rule key is `sync.job.failed.{service}`.
                   └─fire (<cooldown)─▶ no-op
 ```
 
-Acknowledgement and silence are orthogonal modifiers — they suppress
-re-notify without changing `status`.
+Acknowledgement and silence are orthogonal modifiers. They suppress re-notify without changing `status`.
 
 ## Status
 
-Fase 1 MVP — see `docs/plan-nawasara-alerting-phase-1.md` in the root
-repo for the sprint-level breakdown.
+Phase 1 MVP. See `docs/plan-nawasara-alerting-phase-1.md` in the root repo for the sprint-level breakdown.
