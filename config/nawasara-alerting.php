@@ -38,10 +38,28 @@ return [
     'severity' => [
         'critical' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            // Surel TETAP jalan berdampingan dengan Telegram — bukan diganti.
-            // Telegram menambah kecepatan sampai; surel yang menyimpan jejak.
-            // Bila bot dicabut atau grupnya terhapus, peringatan tetap tiba.
-            'channels' => ['email', 'telegram'],
+            /*
+             * Surel DIMATIKAN 21 September 2026. Kanalnya Telegram saja.
+             *
+             * Niat awalnya benar: surel menyimpan jejak, Telegram memberi
+             * kecepatan. Yang tidak diperhitungkan adalah kuota pengirimnya.
+             * Akun Gmail yang dipakai punya batas harian, dan alert uptime
+             * saja menghasilkan ribuan pesan sebulan ("Pemdes Sihebat MATI"
+             * 974 kali, disusul 974 [RESOLVED] pasangannya). Hasilnya 16.317
+             * surel GAGAL berbanding 12.975 yang terkirim, dan 17.074 baris
+             * failed_jobs menumpuk sejak 14 Juli.
+             *
+             * Jejak tertulisnya tidak hilang: setiap alert tetap tersimpan di
+             * `nawasara_notification_logs` beserta subjek dan isinya, dan itu
+             * yang sebenarnya dapat dicari. Kotak masuk yang penuh kegagalan
+             * bukan jejak, ia hanya kebisingan.
+             *
+             * ⚠️ Menyalakannya kembali menuntut pengirim yang sanggup
+             * menampung volumenya (SMTP relai kantor, bukan Gmail pribadi)
+             * DAN cooldown yang lebih panjang. Menghidupkan 'email' di sini
+             * tanpa keduanya akan mengulang persis keadaan yang sama.
+             */
+            'channels' => ['telegram'],
             'cooldown_minutes' => 30,
             'default_color' => 'danger',
         ],
@@ -63,13 +81,18 @@ return [
             // (405 blokir → 2.014 pesan) dan kunci alert sync yang berubah
             // tiap percobaan. Tanpa keduanya, grup ini akan ditinggalkan
             // dalam sehari.
-            'channels' => ['email', 'telegram'],
+            //
+            // Surel dimatikan 21 September 2026, lihat catatan di 'critical'.
+            // Severity inilah penyumbang terbesarnya: alert uptime dan
+            // auto-block IP semuanya di sini.
+            'channels' => ['telegram'],
             'cooldown_minutes' => 120,
             'default_color' => 'warning',
         ],
         'info' => [
             'recipient_groups' => ['developers', 'sysadmin'],
-            'channels' => ['email', 'telegram'],
+            // Surel dimatikan 21 September 2026, lihat catatan di 'critical'.
+            'channels' => ['telegram'],
             'cooldown_minutes' => 360,
             'default_color' => 'info',
         ],
