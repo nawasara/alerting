@@ -22,6 +22,13 @@ use Nawasara\Vault\Facades\Vault;
  */
 class NotifyDispatcher
 {
+    /** Rules routed to the Telegram "konten" topic, regardless of severity. */
+    public const CONTENT_RULES = [
+        'secscan.site.compromised',
+        'secscan.site.suspicious',
+        'secscan.file.spam',
+    ];
+
     public function __construct(
         protected RecipientResolver $recipients,
     ) {}
@@ -185,6 +192,15 @@ class NotifyDispatcher
         // keamanan mati, disk hampir habis — ikut tenggelam.
         if (str_starts_with($key, 'queue.')) {
             return 'sinkronisasi';
+        }
+
+        // Konten situs (judol, obat ilegal, defacement) juga diperiksa SEBELUM
+        // severity. Penanganannya berbeda dari serangan jaringan: yang bergerak
+        // adalah pengelola situs OPD untuk membersihkan berkas, bukan admin
+        // jaringan untuk memblokir IP. Di topik Kritis ia bercampur dengan agen
+        // mati dan disk penuh; di Keamanan tenggelam di antara ratusan blokir IP.
+        if (in_array($key, self::CONTENT_RULES, true)) {
+            return 'konten';
         }
 
         if ($state->severity === 'critical') {
