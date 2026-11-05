@@ -40,7 +40,7 @@
         </div>
 
         {{-- Table --}}
-        <x-nawasara-ui::table stickyLast :headers="['Severity', 'Rule', 'Target', 'Status', 'Fired', 'Count', '']">
+        <x-nawasara-ui::table stickyLast :headers="['Severity', 'Rule', 'Target', 'Fired', 'Count', '']">
             <x-slot:table>
                 @forelse ($this->rows as $row)
                     <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-700/40 cursor-pointer"
@@ -61,19 +61,20 @@
                                     silenced until {{ $row->silenced_until->diffForHumans() }}
                                 </div>
                             @endif
+                            {{-- Status di bawah nama, bukan kolom sendiri: terlihat tanpa menggulir ke kanan. --}}
+                            <div class="mt-1">
+                                @if ($row->status === 'firing')
+                                    <x-nawasara-ui::badge color="danger">Firing</x-nawasara-ui::badge>
+                                @else
+                                    <x-nawasara-ui::badge color="success">Resolved</x-nawasara-ui::badge>
+                                @endif
+                            </div>
                         </td>
                         <td class="px-4 py-2.5 text-sm text-neutral-600 dark:text-neutral-300">
                             @if ($row->target_type)
                                 <code class="text-xs">{{ $row->target_type }}#{{ $row->target_id }}</code>
                             @else
                                 <span class="text-neutral-400">—</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2.5">
-                            @if ($row->status === 'firing')
-                                <x-nawasara-ui::badge color="danger">Firing</x-nawasara-ui::badge>
-                            @else
-                                <x-nawasara-ui::badge color="success">Resolved</x-nawasara-ui::badge>
                             @endif
                         </td>
                         <td class="px-4 py-2.5 text-xs text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
@@ -89,7 +90,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-6">
+                        <td colspan="6" class="px-4 py-6">
                             <x-nawasara-ui::empty-state inline icon="lucide-bell-off" title="Tidak ada alert"
                                 description="Belum ada state yang cocok dengan filter ini." />
                         </td>
